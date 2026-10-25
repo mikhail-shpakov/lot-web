@@ -1,0 +1,15 @@
+{
+  "name": "Жребий · Lot",
+  "short_name": "Жребий",
+  "description": "Ты — один из 117 миллиардов людей, когда-либо живших на Земле. Кем именно — решит жребий.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EFE0BF",
+  "theme_color": "#EFE0BF",
+  "icons": [
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }
+  ]
+}
