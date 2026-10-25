@@ -75,6 +75,10 @@ export interface Settings {
   hand: boolean
   /** null follows the browser. */
   lang: 'ru' | 'en' | null
+  /** The book turns its own pages; false waits for the reader to turn each one. */
+  auto: boolean
+  /** How fast the book turns itself: 1, 2, 4 or 8 times the reading pace. */
+  speed: number
 }
 
 export interface Doc {
@@ -87,7 +91,7 @@ export interface Doc {
 
 export const emptyDoc = (): Doc => ({
   v: 1, lives: [], things: [], cur: null,
-  settings: { onboarded: false, witness: false, wish: ',,', hand: true, lang: null },
+  settings: { onboarded: false, witness: false, wish: ',,', hand: true, lang: null, auto: true, speed: 1 },
 })
 
 const DB = 'lot'

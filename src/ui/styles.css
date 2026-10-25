@@ -230,3 +230,25 @@ input[type=range].time::-moz-range-thumb { width: 12px; height: 12px; border-rad
 @media (min-width: 700px) {
   .screen { padding-top: calc(env(safe-area-inset-top) + 12px); }
 }
+
+/* The reading controls, pinned under the book */
+.player {
+  position: sticky; bottom: 0; z-index: 2; margin-top: 8px; padding: 8px 12px 10px;
+  background: rgba(239, 224, 191, .94); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border-top: 1px solid var(--line);
+}
+.player-age { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.player-n { font: 700 20px/22px var(--serif); min-width: 28px; }
+.player-track { flex: 1; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.player-track span { display: block; height: 100%; background: var(--red); transition: width .6s ease; }
+.player-row { display: flex; gap: 6px; }
+.speeds { display: flex; flex: 1; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.speeds .pbtn { flex: 1; border: 0; border-radius: 0; border-left: 1px solid var(--line); min-width: 0; padding: 10px 0; }
+.speeds .pbtn:first-child { border-left: 0; }
+.pbtn {
+  border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); padding: 10px 12px;
+  font: 700 14px/18px var(--serif); cursor: pointer; white-space: nowrap;
+}
+.pbtn.on { background: var(--ink); color: var(--light); }
+.pbtn.play { min-width: 92px; }
+.pbtn.next { background: var(--ink); color: var(--light); border-color: var(--ink); }
+.pbtn:disabled { background: var(--card); color: var(--line); border-color: var(--line); cursor: default; }

@@ -6,6 +6,8 @@ A browser and iPhone version of [Lot](https://github.com/bigdevwhale/lot), the A
 It is a port, not a remake. The engine (`src/domain`) is the Kotlin engine translated line by line, down to Kotlin's
 `Random` generator, so the same seed and the same choices write the same book as on Android. The texts in `content/` are
 the app's assets, unchanged. The screens follow the app's: the sack, the parish register, the chest, the atlas.
+One thing the web version adds: the book turns its own pages (pause, 1×–8×, or a page by hand), and stops at each fork
+to wait for the reader.
 
 Everything runs in the browser: no server, no account. Lives are kept in IndexedDB, and the app works offline after the
 first visit.

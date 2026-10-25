@@ -22,6 +22,31 @@ export function BookScreen({ onDraw, onArchive, scroller }: { onDraw: (heirOf: n
     if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }))
   }, [page?.entries.length, page?.pending, page?.end])
 
+  const { auto, speed } = s.settings
+  // The book turns itself: once the pen has written the new entries and they have had time to be read, the next page.
+  // It stops at a fork for the reader to choose, and at the end.
+  const turnable = page?.canTurn === true
+  const written = page?.entries.length ?? 0
+  // A hidden tab does not read on; coming back picks the book up where it stopped.
+  const [shownAgain, setShownAgain] = useState(0)
+  useEffect(() => {
+    const v = () => { if (!document.hidden) setShownAgain((n) => n + 1) }
+    document.addEventListener('visibilitychange', v)
+    return () => document.removeEventListener('visibilitychange', v)
+  }, [])
+  useEffect(() => {
+    if (!auto || !turnable || !page) return
+    const fresh = page.entries.slice(Math.min(dry, written))
+    const ink = fresh.reduce((a, e) => a + inkMs(e, w) + 150, 0)
+    const read = fresh.length > 0 ? READ_MS + fresh.reduce((a, e) => a + w.x(e.text).length, 0) * READ_PER_CHAR : 300
+    const t = window.setTimeout(() => {
+      if (document.hidden) return
+      setDry(written)
+      repo.turn()
+    }, (ink + read) / speed)
+    return () => clearTimeout(t)
+  }, [auto, speed, turnable, written, page?.shown, dry, shownAgain])
+
   if (page == null || cur == null) {
     return (
       <div class="col">
@@ -37,7 +62,7 @@ export function BookScreen({ onDraw, onArchive, scroller }: { onDraw: (heirOf: n
   return (
     <div class="col" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       <TopBar title={w.t('Книга', 'The book')} end={s.lives.length > 0 ? <Chip on={false} onClick={onArchive}>{w.t('Все книги', 'All books')}</Chip> : undefined} />
-      <Register name={b.name} year={b.year} endAge={page.end?.age ?? null} place={b.region.name} gen={gen} witness={cur.witness} entries={page.entries} w={w} dry={dry} />
+      <Register name={b.name} year={b.year} endAge={page.end?.age ?? null} place={b.region.name} gen={gen} witness={cur.witness} entries={page.entries} w={w} dry={dry} speed={speed} />
       {page.pending && <ChoiceCard ch={page.pending} w={w} onPick={(i) => { setDry(page.entries.length); repo.pick(i) }} />}
       {page.end && <>
         {row && <EndCard row={row} />}
@@ -48,18 +73,47 @@ export function BookScreen({ onDraw, onArchive, scroller }: { onDraw: (heirOf: n
         </div>
       </>}
       <div style={{ flex: 1, minHeight: '12px' }} />
-      {page.canTurn && <div class="bottom-bar" style={{ position: 'sticky', bottom: 0 }}>
-        <Btn onClick={() => { setDry(page.entries.length); repo.turn() }}>{w.t('Дальше', 'Turn the page')}</Btn>
-      </div>}
+      {page.end == null && <Player age={page.entries[page.entries.length - 1]?.age ?? 0} canTurn={page.canTurn}
+        onTurn={() => { setDry(page.entries.length); repo.turn() }} />}
     </div>
   )
 }
 
 const inkMs = (e: Entry, w: Words) => 900 + w.x(e.text).length * 12
+/** At the reading pace, a page stays a moment after the pen stops, longer for longer entries. */
+const READ_MS = 1400
+const READ_PER_CHAR = 18
+const SPEEDS = [1, 2, 4, 8]
+
+/** The reading controls under the book: pause or read on by itself, how fast, and a page by hand. */
+function Player({ age, canTurn, onTurn }: { age: number; canTurn: boolean; onTurn: () => void }) {
+  const { s, w, repo } = useHome()
+  const { auto, speed } = s.settings
+  const set = (p: { auto?: boolean; speed?: number }) => repo.settings((x) => ({ ...x, ...p }))
+  return (
+    <div class="player">
+      <div class="player-age">
+        <span class="label">{w.t('Возраст', 'Age')}</span>
+        <span class="player-n">{age}</span>
+        <span class="player-track"><span style={{ width: `${Math.min(age, 100)}%` }} /></span>
+        <span class="small">{!canTurn ? w.t('ждёт выбора', 'waiting for you') : auto ? w.t('книга читается', 'reading') : w.t('на паузе', 'paused')}</span>
+      </div>
+      <div class="player-row">
+        <button type="button" class="pbtn play" aria-pressed={auto} onClick={() => set({ auto: !auto })}>
+          {auto ? <>❚❚ {w.t('Пауза', 'Pause')}</> : <>▶ {w.t('Читать', 'Play')}</>}
+        </button>
+        <div class="speeds" role="group" aria-label={w.t('Скорость', 'Speed')}>
+          {SPEEDS.map((x) => <button key={x} type="button" class={`pbtn ${speed === x ? 'on' : ''}`} aria-pressed={speed === x} onClick={() => set({ speed: x, auto: true })}>{x}×</button>)}
+        </div>
+        <button type="button" class="pbtn next" disabled={!canTurn} onClick={onTurn}>{w.t('Дальше', 'Next')} »</button>
+      </div>
+    </div>
+  )
+}
 
 /** The parish-book page: a ruled sheet, the name at the top, ages in red, entries in the registrar's hand. */
-export function Register({ name, year, endAge, place, gen, witness, entries, w, dry = Infinity }: {
-  name: Tx; year: number; endAge: number | null; place: Tx; gen: number; witness: boolean; entries: Entry[]; w: Words; dry?: number
+export function Register({ name, year, endAge, place, gen, witness, entries, w, dry = Infinity, speed = 1 }: {
+  name: Tx; year: number; endAge: number | null; place: Tx; gen: number; witness: boolean; entries: Entry[]; w: Words; dry?: number; speed?: number
 }) {
   // The pen finishes one entry before it starts the next.
   let wait = 0
@@ -73,9 +127,9 @@ export function Register({ name, year, endAge, place, gen, witness, entries, w, 
       <Rule dark />
       {entries.map((e, i) => {
         const fresh = i >= dry
-        const ms = inkMs(e, w)
+        const ms = inkMs(e, w) / speed
         const style = fresh ? { '--ms': `${ms}ms`, '--wait': `${wait}ms` } : undefined
-        if (fresh) wait += ms + 150
+        if (fresh) wait += ms + 150 / speed
         const tone = e.mark === 'HIST' || e.mark === 'MEET' ? 'hist' : e.mark === 'DEATH' ? 'death' : ''
         return (
           <div key={i} class={`entry ${e.mark === 'DEATH' ? 'death-rule' : ''}`}>
